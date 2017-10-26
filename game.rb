@@ -178,3 +178,8 @@ if __FILE__ == $0
 end
 
 # have it learn the rules just by looking at games played. don"t give it any idea of valid rules. it will know whos turn it is.
+# not human like thinking. it's able to play 100K games in under a second and learn from them. it can't take an example or two and simluate it interanlly.
+# differentiable graph
+# neural networks build an internal representation
+# show matrix and graph image together for why dot producrts are important
+# computational graph modeling
