@@ -1,44 +1,4 @@
 module Utils
-  module Activations
-    class Base
-      def self.apply(x)
-        raise NotImplementedError
-      end
-
-      def self.deriv(x)
-        raise NotImplementedError
-      end
-    end
-
-    class Sigmoid < Base
-      def self.apply(x)
-        1 / (1 + Math.exp(-x))
-      end
-
-      def self.deriv(x)
-        apply(x) * (1 - apply(x))
-      end
-    end
-
-    class Relu < Base
-      def self.apply(x)
-        if x > 0
-          x
-        else
-          0
-        end
-      end
-
-      def self.deriv(x)
-        if x > 0
-          1
-        else
-          0
-        end
-      end
-    end
-  end
-
   module Matrix
     def self.zeros(rows, cols)
       rows.times.map do |row|
@@ -129,8 +89,27 @@ module Utils
       result
     end
 
+    def self.sum(mat)
+      result = 0
+      mat.each do |row|
+        row.each do |cell|
+          result += cell
+        end
+      end
+      result
+    end
+
     def self.dimensions(mat)
       [mat.length, mat[0].length]
+    end
+
+    def self.display(mat)
+      mat.each do |row|
+        vals = row.map do |cell|
+          cell.to_s[0..7]
+        end
+        puts vals.join(" ")
+      end
     end
   end
 end
