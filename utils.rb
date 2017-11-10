@@ -6,6 +6,7 @@ module Utils
       end
     end
 
+    # TODO: update this to take a generator
     def self.rands(rows, cols)
       mat = zeros(rows, cols)
       rows.times.each do |row|

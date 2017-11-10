@@ -80,7 +80,7 @@ module Neural
   class Network
     def initialize(cost_function)
       @cost_function = cost_function
-      @index_count = 1
+      @index_count = 0
       @layers = []
     end
 
