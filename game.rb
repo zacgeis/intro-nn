@@ -183,3 +183,7 @@ end
 # neural networks build an internal representation
 # show matrix and graph image together for why dot producrts are important
 # computational graph modeling
+
+# TODO: look at paper sheet in yellow notepad
+# Try three tictactoe networks one with board evaluation, one with a network to pick which spot, one that encodes the rules and winning or losing
+# Text generation using multiple characters inputed and the output character shifted

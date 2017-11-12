@@ -1,7 +1,7 @@
 require_relative "utils"
 require_relative "neural"
 
-def use_network
+def xor_one_layer_using_network
   inputs = [
     [0,0,1],
     [0,1,1],
@@ -24,14 +24,18 @@ def use_network
   puts "test"
   network.forward(inputs)
 end
-# TODO start presentation with what we are going to cover
 
-def use_network_complex
+# TODO start presentation with what we are going to cover
+# TODO: add a double layer network as an example
+# Update terminology to use
+# TODO: add note that ideally the batch would be the entire training set, but for computation reasons that usually doesn't work
+
+def xor_two_layers_using_network
   inputs = [
-    [0,0,1],
-    [0,1,1],
-    [1,0,1],
-    [1,1,1],
+    [0,0],
+    [0,1],
+    [1,0],
+    [1,1],
   ]
 
   # todo update all target to targets
@@ -51,7 +55,7 @@ def use_network_complex
   network.add_layer(Utils::Matrix.rands(3, 4), Neural::Activations::Sigmoid)
   network.add_layer(Utils::Matrix.rands(4, 1), Neural::Activations::Sigmoid)
 
-  network.train(inputs, targets, epochs: 20_000, batch_size: 4, learning_rate: 0.1, debug: false, validate: false)
+  network.train(inputs, targets, epochs: 20_000, batch_size: 4, learning_rate: 0.2, debug: false, validate: false)
   puts "\n\n"
   puts "Input"
   Utils::Matrix.display(inputs)
@@ -59,9 +63,11 @@ def use_network_complex
   Utils::Matrix.display(network.forward(inputs))
 end
 
-use_network_complex
+xor_two_layers_using_network
 
-def basic
+def xor_single_without_network
+  # If this is all zeros, it will cause the network not to learn.
+  # Needs at least a one to let the back prop take into account the gradient
   inputs = [
     [0,0,1],
     [0,1,1],
@@ -82,19 +88,29 @@ def basic
   2000.times.each do |iter|
     hidden_sum = Utils::Matrix.multiply(inputs, weights)
     hidden_result = Utils::Matrix.map_one(hidden_sum) do |val|
-      Utils::Activations::Sigmoid.apply(val)
+      Neural::Activations::Sigmoid.apply(val)
     end
 
-    error = Utils::Matrix.element_sub(target, hidden_result)
-    puts error
+    error_gradient = Utils::Matrix.element_sub(target, hidden_result)
 
     gradients = Utils::Matrix.map_one(hidden_sum) do |val|
-      Utils::Activations::Sigmoid.deriv(val)
+      Neural::Activations::Sigmoid.deriv(val)
     end
 
-    delta = Utils::Matrix.scalar(learning_rate, Utils::Matrix.element_mul(gradients, error))
+    delta = Utils::Matrix.scalar(learning_rate, Utils::Matrix.element_mul(gradients, error_gradient))
     weight_updates = Utils::Matrix.multiply(Utils::Matrix.transpose(inputs), delta)
 
     weights = Utils::Matrix.element_add(weight_updates, weights)
   end
+
+  hidden_sum = Utils::Matrix.multiply(inputs, weights)
+  hidden_result = Utils::Matrix.map_one(hidden_sum) do |val|
+    Neural::Activations::Sigmoid.apply(val)
+  end
+  puts "Targets"
+  Utils::Matrix.display(target)
+  puts "Output"
+  Utils::Matrix.display(hidden_result)
 end
+
+# xor_single_without_network
