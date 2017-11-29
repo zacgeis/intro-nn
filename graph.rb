@@ -30,8 +30,8 @@ class Multiply < Node
     return x * y
   end
 
-  def backward
-    raise NotImplementedError
+  def backward(x, y)
+    return [y, x]
   end
 end
 
@@ -47,8 +47,8 @@ class Add < Node
     return x + y
   end
 
-  def backward
-    raise NotImplementedError
+  def backward(x, y)
+    return [1, 1]
   end
 end
 
@@ -96,6 +96,7 @@ class Solver
     last_value = nil
     @sorted_nodes.each do |node|
       if node.is_a?(Value)
+        # Wrap in result
         raise "'#{node.id}' value not found" if @context[node.id].nil?
       else
         inputs = node.in_nodes.map { |in_node| @context[in_node.id] }
@@ -106,6 +107,11 @@ class Solver
     end
     last_value
   end
+end
+
+# Default deriv to 0
+class Result
+  attr_accessor :value, :derivative
 end
 
 x = Value.new(id: "x", static: true)
@@ -133,6 +139,21 @@ puts solver.resolve
 # With better context scoping
 # raise exception if they can't be found in the context
 # Do we need to be careful about going over nodes twice
+# Make it flexible enough to handle both single values and matrix values.
+# Value nodes should know how to update themselves possibly?
+# Try to keep the state managed as much as possible with clear boundaries between resolsibilties
+# https://en.wikipedia.org/wiki/Differential_of_a_function#Differentials_in_several_variables
+# We do plus in backprop instead of multiplication to account for total derivatives and not just partials. (nodes that have multiple outputs)
+# http://karpathy.github.io/neuralnets/
+# https://mattmazur.com/2015/03/17/a-step-by-step-backpropagation-example/
+# https://www.wolframalpha.com/input/?i=derive+xy
+# https://www.wolframalpha.com/input/?i=derive+(axyz)(bxyz)
+# https://en.wikipedia.org/wiki/Backpropagation
+# All just a differentialable graph
+# learning as an optimization problem.
+# Move this all into crystal
+# Have the deriv chain start with 1.0. tugging on the network with 1.0
+# Move all of these notes to the doc.
 
 # r = graph.resolve(context)
 # puts context
