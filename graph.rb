@@ -155,6 +155,24 @@ puts solver.resolve
 # Have the deriv chain start with 1.0. tugging on the network with 1.0
 # Move all of these notes to the doc.
 
+# MNIST dataset
+# Neural network as machine emulator with attached memory to read from
+# Neural networks can model any logic gates.
+# neural networks work much better on natural data that don't have percise answers as requirements
+# Rnns are turning complete
+# https://stats.stackexchange.com/questions/245737/mathematical-justification-for-using-recurrent-neural-networks-over-feed-forward
+# use more relu activations
+# http://yann.lecun.com/exdb/mnist/
+# plot tanh(x + y + z)
+# graph tanh(x+y) with various weights to get an idea of how it changes.
+# game of life should learn to generalize around neighbor weights and not need to see every example
+# programming by example
+# have a ui for giving examples on the rules of the game of life.
+# configure an entire set of rules and have the network learn.
+# have a list of different examples and allow modifying them.
+# add note to learn game of life from the neural network
+# https://www.wolframalpha.com/input/?i=derive+(axy)(bxy)
+
 # r = graph.resolve(context)
 # puts context
 # puts r
