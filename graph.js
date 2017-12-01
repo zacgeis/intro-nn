@@ -50,6 +50,24 @@ class Add extends Node {
   }
 }
 
+class Multiply extends Node {
+  constructor(in1, in2, opts = {}) {
+    super(opts);
+    this.type = "MUL";
+    this.in_nodes = [in1, in2];
+    in1.out_nodes.push(this);
+    in2.out_nodes.push(this);
+  }
+
+  forward(x, y) {
+    return x * y;
+  }
+
+  backward(x, y) {
+    return [y, x];
+  }
+}
+
 class Constant extends Node {
   constructor(opt = {}) {
     super(opt);
@@ -64,12 +82,29 @@ class Variable extends Node {
   }
 }
 
+class State {
+  constructor(value = 0.0, deriv = 0.0) {
+    this.value = value;
+    this.deriv = deriv;
+  }
+}
+
 // Ensure that we don't have overlapping ids
 class Solver {
-  constructor(result_node, context) {
+  constructor(result_node, initialValues) {
     this.result_node = result_node;
-    this.context = context;
+    // Possibly move these down.
     this.sortedNodes = this.sortNodes(this.result_node);
+    this.idToState = this.buildState(this.sortedNodes, initialValues);
+  }
+
+  buildState(nodes, initialValues) {
+    let stateMap = {};
+    for(let i = 0; i < nodes.length; i++) {
+      let node = nodes[i];
+      stateMap[node.id] = new State(initialValues[node.id] || 0.0);
+    }
+    return stateMap;
   }
 
   sortNodes(node, sorted = [], visited = {}) {
@@ -92,17 +127,27 @@ class Solver {
   solve() {
     console.log(this.graphToString());
 
-    let last_value = null;
+    let lastValue = null;
     for(let i = 0; i < this.sortedNodes.length; i++) {
       let node = this.sortedNodes[i];
-      if((node instanceof Value) || (node instanceof Constant)) {
-        if(!this.context.hasOwnProperty(node.id)) {
-          throw new Error("'" + node.id + "' value not found in context");
-        } else {
-
+      if((node instanceof Variable) || (node instanceof Constant)) {
+        if(!this.idToState.hasOwnProperty(node.id)) {
+          throw new Error("'" + node.id + "' value not found in idToState");
         }
+      } else {
+        let inputs = node.in_nodes.map((in_node) => this.idToState[in_node.id].value);
+        let result = node.forward.apply(node, inputs);
+        this.idToState[node.id].value = result;
       }
+      lastValue = this.idToState[node.id];
     }
+
+    let initialDeriv = 1.0;
+    for(let i = this.sortedNodes.length - 1; i >= 0; i--) {
+      let node = this.sortedNodes[i];
+    }
+
+    return lastValue;
   }
 
   graphToString() {
@@ -121,8 +166,14 @@ class Solver {
 }
 
 let x = new Constant({id: "x"});
-let y = new Variable({id: "y"});
-let add = new Add(x, y);
+let m = new Variable({id: "m"});
+let b = new Variable({id: "b"});
+let mul = new Multiply(m, x);
+let add = new Add(mul, b);
 
-let solver = new Solver(add, {"x": 1, "y": 2});
-solver.solve();
+let solver = new Solver(add, {
+  "m": 2,
+  "b": 3,
+  "x": 4,
+});
+console.log(solver.solve());
