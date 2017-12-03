@@ -11,12 +11,29 @@ function generateId(len) {
   return result;
 }
 
+function randomIndexes(len) {
+  let result = [];
+  for(let i = 0; i < len; i++) {
+    result.push(i);
+  }
+  for(let i = len - 1; i <= 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    let t = result[i];
+    result[i] = result[j];
+    result[j] = t;
+  }
+  return result;
+}
+
 class Node {
-  constructor(opts) {
-    this.in_nodes = [];
+  constructor(ins, opts) {
+    this.in_nodes = ins;
     this.out_nodes = [];
     this.id = opts.id || generateId(8);
     this.dispaly = "NODE";
+    for(let i = 0; i < ins.length; i++) {
+      ins[i].out_nodes.push(this);
+    }
   }
 
   forward() {
@@ -33,51 +50,89 @@ class Node {
 }
 
 class Add extends Node {
-  constructor(in1, in2, opts = {}) {
-    super(opts);
+  constructor(ins, opts = {}) {
+    super(ins, opts);
     this.type = "ADD";
-    this.in_nodes = [in1, in2];
-    in1.out_nodes.push(this);
-    in2.out_nodes.push(this);
   }
 
-  forward(x, y) {
-    return x + y;
+  forward(vals) {
+    // x + y
+    let result = 0.0;
+    for(let i = 0; i < vals.length; i++) {
+      result += vals[i];
+    }
+    return result;
   }
 
-  backward(x, y) {
-    return [1, 1];
+  backward(vals) {
+    // [x, y] -> [1, 1]
+    let result = [];
+    for(let i = 0; i < vals.length; i++) {
+      result.push(1);
+    }
+    return result;
   }
 }
 
 class Multiply extends Node {
-  constructor(in1, in2, opts = {}) {
-    super(opts);
+  constructor(ins, opts = {}) {
+    super(ins, opts);
     this.type = "MUL";
-    this.in_nodes = [in1, in2];
-    in1.out_nodes.push(this);
-    in2.out_nodes.push(this);
   }
 
-  forward(x, y) {
-    return x * y;
+  forward(vals) {
+    // x * y
+    let result = 1.0;
+    for(let i = 0; i < vals.length; i++) {
+      result *= vals[i];
+    }
+    return result;
   }
 
-  backward(x, y) {
-    return [y, x];
+  backward(vals) {
+    // [x, y] -> [y, x]
+    let result = [];
+    let carry = 1.0;
+    for(let i = 0; i < vals.length; i++) {
+      result.push(carry);
+      carry *= vals[i];
+    }
+    carry = 1.0;
+    for(let i = vals.length - 1; i >= 0; i--) {
+      result[i] *= carry;
+      carry *= vals[i];
+    }
+    return result;
+  }
+}
+
+class Sigmoid extends Node {
+  constructor(ins, opts = {}) {
+    super(ins, opts);
+    this.type = "SIG";
+  }
+
+  forward(vals) {
+    let x = vals[0];
+    return 1 / (1 + Math.exp(-x));
+  }
+
+  backward(vals) {
+    let x = vals[0];
+    return [Math.exp(x) / Math.pow(1 + Math.exp(x), 2)]
   }
 }
 
 class Constant extends Node {
   constructor(opt = {}) {
-    super(opt);
+    super([], opt);
     this.type = "CONST";
   }
 }
 
 class Variable extends Node {
   constructor(opt = {}) {
-    super(opt);
+    super([], opt);
     this.type = "VAR";
   }
 }
@@ -123,9 +178,13 @@ class Solver {
     return sorted;
   }
 
-  solve() {
+  solve(constants = {}) {
     let sortedNodes = this.sortedNodes;
     let idToState = this.idToState;
+
+    for(let id in constants) {
+      idToState[id].value = constants[id];
+    }
 
     for(let i = 0; i < sortedNodes.length; i++) {
       let node = sortedNodes[i];
@@ -135,7 +194,7 @@ class Solver {
         }
       } else {
         let inputs = node.in_nodes.map((in_node) => idToState[in_node.id].value);
-        let result = node.forward.apply(node, inputs);
+        let result = node.forward(inputs);
         idToState[node.id].value = result;
       }
       idToState[node.id].deriv = 0.0;
@@ -158,7 +217,7 @@ class Solver {
         continue;
       }
       let inputs = node.in_nodes.map((in_node) => idToState[in_node.id].value);
-      let derivs = node.backward.apply(node, inputs);
+      let derivs = node.backward(inputs);
       for(let j = 0; j < node.in_nodes.length; j++) {
         let in_node = node.in_nodes[j];
         let deriv = derivs[j];
@@ -202,8 +261,8 @@ function linearExample() {
   let x = new Constant({id: "x"});
   let m = new Variable({id: "m"});
   let b = new Variable({id: "b"});
-  let mul = new Multiply(m, x);
-  let add = new Add(mul, b);
+  let mul = new Multiply([m, x]);
+  let add = new Add([mul, b]);
 
   let solver = new Solver(add, {
     "m": 2.0,
@@ -219,10 +278,68 @@ function linearExample() {
     let errors = {};
     errors[add.id] = target - result;
     solver.fit(errors, 0.01);
-    console.log(solver.graphToString());
+    //console.log(solver.graphToString());
   }
 }
 
-linearExample();
+function xorExample() {
+  let a = new Constant({id: "a"});
+  let b = new Constant({id: "b"});
+
+  let aw1 = new Variable({id: "aw1"});
+  let bw1 = new Variable({id: "bw1"});
+  let aw2 = new Variable({id: "aw2"});
+  let bw2 = new Variable({id: "bw2"});
+  let o1 = new Variable({id: "o1"});
+  let o2 = new Variable({id: "o2"});
+
+  let h1i = new Add([new Multiply([a, aw1]), new Multiply([b, bw1])]);
+  let h1o = new Sigmoid([h1i]);
+
+  let h2i = new Add([new Multiply([b, bw2]), new Multiply([a, aw2])]);
+  let h2o = new Sigmoid([h2i]);
+
+  let o1i = new Add([new Multiply([h1o, o1]), new Multiply([h2o, o2])]);
+  let o1o = new Sigmoid([o1i]);
+
+  let randomInit = () => { return Math.random() - 0.5 };
+
+  // update solver to take multiple root nodes.
+  let solver = new Solver(o1o, {
+    "aw1": randomInit(),
+    "aw2": randomInit(),
+    "bw1": randomInit(),
+    "bw2": randomInit(),
+    "o1": randomInit(),
+    "o2": randomInit(),
+  });
+
+  let data = [
+    [0, 0, 0],
+    [1, 0, 1],
+    [0, 1, 1],
+    [1, 1, 0],
+  ];
+
+  let learningRate = 0.01;
+  let iterations = 1000 * 1000;
+  for(let i = 0; i < iterations; i++) {
+    let indexes = randomIndexes(data.length);
+    for(let j = 0; j < data.length; j++) {
+      let randomIndex = indexes[j];
+      solver.solve({"a": data[randomIndex][0], "b": data[randomIndex][1]});
+      let target = data[randomIndex][2];
+      let result = solver.idToState[o1o.id].value;
+      console.log(data[randomIndex][0] + " ^ " + data[randomIndex][1] + " = " + result);
+      let errors = {};
+      errors[o1o.id] = target - result;
+      solver.fit(errors, learningRate);
+    }
+  }
+  console.log(solver.graphToString());
+}
+
+//linearExample();
+xorExample();
 
 // Add notes about online vs batch. SGD, mini batch, and full batch.
