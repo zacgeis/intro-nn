@@ -91,10 +91,9 @@ class State {
 
 // Ensure that we don't have overlapping ids
 class Solver {
-  constructor(result_node, initialValues) {
-    this.result_node = result_node;
-    // Possibly move these down.
-    this.sortedNodes = this.sortNodes(this.result_node);
+  constructor(resultNode, initialValues) {
+    this.resultNode = resultNode;
+    this.sortedNodes = this.sortNodes(this.resultNode);
     this.idToState = this.buildState(this.sortedNodes, initialValues);
   }
 
@@ -125,39 +124,73 @@ class Solver {
   }
 
   solve() {
-    console.log(this.graphToString());
+    let sortedNodes = this.sortedNodes;
+    let idToState = this.idToState;
 
-    let lastValue = null;
-    for(let i = 0; i < this.sortedNodes.length; i++) {
-      let node = this.sortedNodes[i];
+    for(let i = 0; i < sortedNodes.length; i++) {
+      let node = sortedNodes[i];
       if((node instanceof Variable) || (node instanceof Constant)) {
-        if(!this.idToState.hasOwnProperty(node.id)) {
+        if(!idToState.hasOwnProperty(node.id)) {
           throw new Error("'" + node.id + "' value not found in idToState");
         }
       } else {
-        let inputs = node.in_nodes.map((in_node) => this.idToState[in_node.id].value);
+        let inputs = node.in_nodes.map((in_node) => idToState[in_node.id].value);
         let result = node.forward.apply(node, inputs);
-        this.idToState[node.id].value = result;
+        idToState[node.id].value = result;
       }
-      lastValue = this.idToState[node.id];
+      idToState[node.id].deriv = 0.0;
     }
 
-    let initialDeriv = 1.0;
-    for(let i = this.sortedNodes.length - 1; i >= 0; i--) {
-      let node = this.sortedNodes[i];
+    return idToState;
+  }
+
+  fit(idToError, learningRate) {
+    let sortedNodes = this.sortedNodes;
+    let idToState = this.idToState;
+
+    for(let id in idToError) {
+      idToState[id].deriv = idToError[id];
     }
 
-    return lastValue;
+    for(let i = sortedNodes.length - 1; i >= 0; i--) {
+      let node = sortedNodes[i];
+      if((node instanceof Variable) || (node instanceof Constant)) {
+        continue;
+      }
+      let inputs = node.in_nodes.map((in_node) => idToState[in_node.id].value);
+      let derivs = node.backward.apply(node, inputs);
+      for(let j = 0; j < node.in_nodes.length; j++) {
+        let in_node = node.in_nodes[j];
+        let deriv = derivs[j];
+        idToState[in_node.id].deriv += idToState[node.id].deriv * deriv;
+      }
+    }
+
+    for(let i = 0; i < sortedNodes.length; i++) {
+      let node = sortedNodes[i];
+      if(node instanceof Variable) {
+        let state = idToState[node.id];
+        state.value += state.deriv * learningRate;
+      }
+    }
+
+    return idToState;
   }
 
   graphToString() {
+    let sortedNodes = this.sortedNodes;
+    let idToState = this.idToState;
     let output = "";
-    for(let i = 0; i < this.sortedNodes.length; i++) {
-      let node = this.sortedNodes[i];
+    for(let i = 0; i < sortedNodes.length; i++) {
+      let node = sortedNodes[i];
       let inputs = node.in_nodes.map((in_node) => in_node.toString()).join(", ");
       output += node.toString();
       if(inputs.length > 0) {
         output += " <- " + inputs;
+      }
+      if(idToState !== null) {
+        let state = idToState[node.id];
+        output += " (value: " + state.value + ", deriv: " + state.deriv + ")";
       }
       output += "\n";
     }
@@ -165,15 +198,31 @@ class Solver {
   }
 }
 
-let x = new Constant({id: "x"});
-let m = new Variable({id: "m"});
-let b = new Variable({id: "b"});
-let mul = new Multiply(m, x);
-let add = new Add(mul, b);
+function linearExample() {
+  let x = new Constant({id: "x"});
+  let m = new Variable({id: "m"});
+  let b = new Variable({id: "b"});
+  let mul = new Multiply(m, x);
+  let add = new Add(mul, b);
 
-let solver = new Solver(add, {
-  "m": 2,
-  "b": 3,
-  "x": 4,
-});
-console.log(solver.solve());
+  let solver = new Solver(add, {
+    "m": 2.0,
+    "b": 3.0,
+    "x": 4.0,
+  });
+  let target = 5;
+
+  for(let i = 0; i < 15; i++) {
+    solver.solve();
+    let result = solver.idToState[add.id].value;
+    console.log(result);
+    let errors = {};
+    errors[add.id] = target - result;
+    solver.fit(errors, 0.01);
+    console.log(solver.graphToString());
+  }
+}
+
+linearExample();
+
+// Add notes about online vs batch. SGD, mini batch, and full batch.
