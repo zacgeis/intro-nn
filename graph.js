@@ -287,8 +287,8 @@ function linearExample() {
 }
 
 function xorExample() {
-  let a = new Constant({id: "i1"});
-  let b = new Constant({id: "i2"});
+  let i1 = new Constant({id: "i1"});
+  let i2 = new Constant({id: "i2"});
 
   let i1h1 = new Variable({id: "i1->h1"});
   let i2h1 = new Variable({id: "i2->h1"});
@@ -544,6 +544,6 @@ function numberExample() {
   console.log(solver.graphToString());
 }
 
-numberExample();
+//numberExample();
 //linearExample();
-//xorExample();
+xorExample();
