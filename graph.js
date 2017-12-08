@@ -1,8 +1,8 @@
-let numbers = "0123456789";
-let lowercase = "abcdefghijklmnopqrstuvwxyz";
-let uppercase = lowercase.toUpperCase();
-
 function generateId(len) {
+  let numbers = "0123456789";
+  let lowercase = "abcdefghijklmnopqrstuvwxyz";
+  let uppercase = lowercase.toUpperCase();
+
   let items = numbers + lowercase + uppercase;
   let result = "";
   for(let i = 0; i < len; i++) {
@@ -16,7 +16,7 @@ function shuffleIndexes(len) {
   for(let i = 0; i < len; i++) {
     result.push(i);
   }
-  for(let i = len - 1; i <= 0; i--) {
+  for(let i = len - 1; i >= 0; i--) {
     let j = Math.floor(Math.random() * (i + 1));
     let t = result[i];
     result[i] = result[j];
@@ -543,7 +543,3 @@ function numberExample() {
   }
   console.log(solver.graphToString());
 }
-
-//numberExample();
-//linearExample();
-xorExample();
