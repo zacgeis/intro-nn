@@ -25,11 +25,6 @@ def xor_one_layer_using_network
   network.forward(inputs)
 end
 
-# TODO start presentation with what we are going to cover
-# TODO: add a double layer network as an example
-# Update terminology to use
-# TODO: add note that ideally the batch would be the entire training set, but for computation reasons that usually doesn't work
-
 def xor_two_layers_using_network
   inputs = [
     [0,0],
@@ -66,8 +61,6 @@ end
 xor_two_layers_using_network
 
 def xor_single_without_network
-  # If this is all zeros, it will cause the network not to learn.
-  # Needs at least a one to let the back prop take into account the gradient
   inputs = [
     [0,0,1],
     [0,1,1],
@@ -112,5 +105,3 @@ def xor_single_without_network
   puts "Output"
   Utils::Matrix.display(hidden_result)
 end
-
-# xor_single_without_network

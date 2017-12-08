@@ -1,5 +1,3 @@
-# TODO include 3d graph and explain gradient with two dimensions and what the deriv is intutively
-# TODO add validations around dimensions
 
 require_relative "utils"
 
@@ -109,9 +107,6 @@ module Neural
       debug = opts[:debug] || false
       validate = opts[:validate] || false
 
-      # check that targets and inputs are the same size
-      # todo, write a multi layer as a basic example too
-
       start_time = Time.now
       epochs.times.each do |epoch|
         batches = inputs.length.times.to_a.shuffle
@@ -182,13 +177,6 @@ module Neural
             end
             error_gradient = Utils::Matrix.multiply(delta, Utils::Matrix.transpose(layer.weights))
           end
-
-          # TODO update the delta to not include the learning rate.
-          # Learning rate should only get applied to the weight updates
-          # TODO focus on having a neural network explain why it did something
-          # Add notes from software 2.0 to presentation
-          # make display more intelligent to handle scientific numbers
-          # break train into forward and backward pass.
 
           @layers.each do |layer|
             weight_update = weight_updates.pop

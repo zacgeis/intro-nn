@@ -11,7 +11,7 @@ function generateId(len) {
   return result;
 }
 
-function randomIndexes(len) {
+function shuffleIndexes(len) {
   let result = [];
   for(let i = 0; i < len; i++) {
     result.push(i);
@@ -144,7 +144,6 @@ class State {
   }
 }
 
-// Ensure that we don't have overlapping ids
 class Solver {
   constructor(resultNodes, initialValues) {
     let sorted = [];
@@ -269,7 +268,7 @@ function linearExample() {
   let mul = new Multiply([m, x]);
   let add = new Add([mul, b]);
 
-  let solver = new Solver(add, {
+  let solver = new Solver([add], {
     "m": 2.0,
     "b": 3.0,
     "x": 4.0,
@@ -283,40 +282,39 @@ function linearExample() {
     let errors = {};
     errors[add.id] = target - result;
     solver.fit(errors, 0.01);
-    //console.log(solver.graphToString());
+    console.log(solver.graphToString());
   }
 }
 
 function xorExample() {
-  let a = new Constant({id: "a"});
-  let b = new Constant({id: "b"});
+  let a = new Constant({id: "i1"});
+  let b = new Constant({id: "i2"});
 
-  let aw1 = new Variable({id: "aw1"});
-  let bw1 = new Variable({id: "bw1"});
-  let aw2 = new Variable({id: "aw2"});
-  let bw2 = new Variable({id: "bw2"});
-  let o1 = new Variable({id: "o1"});
-  let o2 = new Variable({id: "o2"});
+  let i1h1 = new Variable({id: "i1->h1"});
+  let i2h1 = new Variable({id: "i2->h1"});
+  let i1h2 = new Variable({id: "i1->h2"});
+  let i2h2 = new Variable({id: "i2->h2"});
+  let h2o1 = new Variable({id: "h2->o1"});
+  let h1o1 = new Variable({id: "h1->o1"});
 
-  let h1i = new Add([new Multiply([a, aw1]), new Multiply([b, bw1])]);
+  let h1i = new Add([new Multiply([i1, i1h1]), new Multiply([i2, i2h1])]);
   let h1o = new Sigmoid([h1i]);
 
-  let h2i = new Add([new Multiply([b, bw2]), new Multiply([a, aw2])]);
+  let h2i = new Add([new Multiply([i1, i1h2]), new Multiply([i2, i2h2])]);
   let h2o = new Sigmoid([h2i]);
 
-  let o1i = new Add([new Multiply([h1o, o1]), new Multiply([h2o, o2])]);
+  let o1i = new Add([new Multiply([h1o, h1o1]), new Multiply([h2o, h2o1])]);
   let o1o = new Sigmoid([o1i]);
 
   let randomInit = () => { return Math.random() - 0.5 };
 
-  // update solver to take multiple root nodes.
-  let solver = new Solver(o1o, {
-    "aw1": randomInit(),
-    "aw2": randomInit(),
-    "bw1": randomInit(),
-    "bw2": randomInit(),
-    "o1": randomInit(),
-    "o2": randomInit(),
+  let solver = new Solver([o1o], {
+    "i1->h1": randomInit(),
+    "i2->h1": randomInit(),
+    "i1->h2": randomInit(),
+    "i2->h2": randomInit(),
+    "h2->o1": randomInit(),
+    "h1->o1": randomInit(),
   });
 
   let data = [
@@ -329,10 +327,10 @@ function xorExample() {
   let learningRate = 0.01;
   let iterations = 1000 * 1000;
   for(let i = 0; i < iterations; i++) {
-    let indexes = randomIndexes(data.length);
+    let indexes = shuffleIndexes(data.length);
     for(let j = 0; j < data.length; j++) {
       let randomIndex = indexes[j];
-      solver.solve({"a": data[randomIndex][0], "b": data[randomIndex][1]});
+      solver.solve({"i1": data[randomIndex][0], "i2": data[randomIndex][1]});
       let target = data[randomIndex][2];
       let result = solver.idToState[o1o.id].value;
       console.log(data[randomIndex][0] + " ^ " + data[randomIndex][1] + " = " + result);
@@ -344,10 +342,7 @@ function xorExample() {
   console.log(solver.graphToString());
 }
 
-//linearExample();
-//xorExample();
-
-let numberInputs = (function() {
+let numberData = (function() {
   let zeroIn = [
     1, 1, 1,
     1, 0, 1,
@@ -481,7 +476,6 @@ function numberExample() {
     inputNodes.push(new Constant({id: "i" + i}));
   }
 
-  // TODO update xor example to use this naming convention
   let allWeights = [];
 
   let hiddenOutputs = [];
@@ -515,26 +509,35 @@ function numberExample() {
 
   let solver = new Solver(outputOutputs, initialValues);
 
-  let data = [
-    [0, 0, 0],
-    [1, 0, 1],
-    [0, 1, 1],
-    [1, 1, 0],
-  ];
-
   let learningRate = 0.01;
   let iterations = 1000 * 1000;
   for(let i = 0; i < iterations; i++) {
-    // TODO: update language to shuffleIndexes
-    let indexes = randomIndexes(data.length);
-    for(let j = 0; j < data.length; j++) {
+    let indexes = shuffleIndexes(numberData.length);
+    for(let j = 0; j < numberData.length; j++) {
       let randomIndex = indexes[j];
-      solver.solve({"i0": data[randomIndex][0], "i1": data[randomIndex][1]});
-      let target = data[randomIndex][2];
-      let result = solver.idToState[outputOutputs[0].id].value;
-      console.log(data[randomIndex][0] + " ^ " + data[randomIndex][1] + " = " + result);
+
+      let inputs = numberData[randomIndex][0];
+      let constantValues = {};
+      for(let k = 0; k < inputNodes.length; k++) {
+        let inputNode = inputNodes[k];
+        constantValues[inputNode.id] = inputs[k];
+      }
+
+      solver.solve(constantValues);
+
+      let outputValues = [];
+      let errorRate = 0;
+      let targets = numberData[randomIndex][1];
       let errors = {};
-      errors[outputOutputs[0].id] = target - result;
+      for(let k = 0; k < outputOutputs.length; k++) {
+        let outputNode = outputOutputs[k];
+        let result = solver.idToState[outputNode.id].value;
+        errorRate += result;
+        outputValues.push(result);
+        errors[outputNode.id] = targets[k] - result;
+      }
+      errorRate = errorRate / outputValues.length;
+      console.log(i, errorRate);
       solver.fit(errors, learningRate);
     }
   }
@@ -542,5 +545,5 @@ function numberExample() {
 }
 
 numberExample();
-
-// Add notes about online vs batch. SGD, mini batch, and full batch.
+//linearExample();
+//xorExample();
