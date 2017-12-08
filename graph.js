@@ -146,9 +146,15 @@ class State {
 
 // Ensure that we don't have overlapping ids
 class Solver {
-  constructor(resultNode, initialValues) {
-    this.resultNode = resultNode;
-    this.sortedNodes = this.sortNodes(this.resultNode);
+  constructor(resultNodes, initialValues) {
+    let sorted = [];
+    let visited = {};
+    for(let i = 0; i < resultNodes.length; i++) {
+      let node = resultNodes[i];
+      this.sortNodes(node, sorted, visited);
+    }
+    this.sortedNodes = sorted;
+
     this.idToState = this.buildState(this.sortedNodes, initialValues);
   }
 
@@ -161,7 +167,7 @@ class Solver {
     return stateMap;
   }
 
-  sortNodes(node, sorted = [], visited = {}) {
+  sortNodes(node, sorted, visited) {
     if(visited[node.id] === 1) {
       throw new Error("equation graph is not a dag");
     }
@@ -175,7 +181,6 @@ class Solver {
     }
     visited[node.id] = 2;
     sorted.push(node);
-    return sorted;
   }
 
   solve(constants = {}) {
@@ -340,6 +345,202 @@ function xorExample() {
 }
 
 //linearExample();
-xorExample();
+//xorExample();
+
+let numberInputs = (function() {
+  let zeroIn = [
+    1, 1, 1,
+    1, 0, 1,
+    1, 0, 1,
+    1, 0, 1,
+    1, 1, 1,
+  ];
+  let zeroOut = [
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0
+  ];
+
+  let oneIn = [
+    0, 1, 0,
+    1, 1, 0,
+    0, 1, 0,
+    0, 1, 0,
+    1, 1, 1,
+  ];
+  let oneOut = [
+    0, 1, 0, 0, 0, 0, 0, 0, 0, 0
+  ];
+
+  let twoIn = [
+    1, 1, 1,
+    0, 0, 1,
+    1, 1, 1,
+    1, 0, 0,
+    1, 1, 1,
+  ];
+  let twoOut = [
+    0, 0, 1, 0, 0, 0, 0, 0, 0, 0
+  ];
+
+  let threeIn = [
+    1, 1, 1,
+    0, 0, 1,
+    1, 1, 1,
+    0, 0, 1,
+    1, 1, 1,
+  ];
+  let threeOut = [
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0
+  ];
+
+  let fourIn = [
+    1, 0, 1,
+    1, 0, 1,
+    1, 1, 1,
+    0, 0, 1,
+    0, 0, 1,
+  ];
+  let fourOut = [
+    0, 0, 0, 0, 1, 0, 0, 0, 0, 0
+  ];
+
+  let fiveIn = [
+    1, 1, 1,
+    1, 0, 0,
+    1, 1, 1,
+    0, 0, 1,
+    1, 1, 1,
+  ];
+  let fiveOut = [
+    0, 0, 0, 0, 0, 1, 0, 0, 0, 0
+  ];
+
+  let sixIn = [
+    1, 0, 0,
+    1, 0, 0,
+    1, 1, 1,
+    1, 0, 1,
+    1, 1, 1,
+  ];
+  let sixOut = [
+    0, 0, 0, 0, 0, 0, 1, 0, 0, 0
+  ];
+
+  let sevenIn = [
+    1, 1, 1,
+    0, 0, 1,
+    0, 1, 0,
+    0, 1, 0,
+    0, 1, 0,
+  ];
+  let sevenOut = [
+    0, 0, 0, 0, 0, 0, 0, 1, 0, 0
+  ];
+
+  let eightIn = [
+    1, 1, 1,
+    1, 0, 1,
+    1, 1, 1,
+    1, 0, 1,
+    1, 1, 1,
+  ];
+  let eightOut = [
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 0
+  ];
+
+  let nineIn = [
+    1, 1, 1,
+    1, 0, 1,
+    1, 1, 1,
+    0, 0, 1,
+    0, 0, 1,
+  ];
+  let nineOut = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+  ];
+
+  return [
+    [oneIn, oneOut],
+    [twoIn, twoOut],
+    [threeIn, threeOut],
+    [fourIn, fourOut],
+    [fiveIn, fiveOut],
+    [sixIn, sixOut],
+    [sevenIn, sevenOut],
+    [eightIn, eightOut],
+    [nineIn, nineOut],
+  ];
+}());
+
+function numberExample() {
+  let inputNodeCount = 15;
+  let hiddenNodeCount = 12;
+  let outputNodeCount = 10;
+
+  let inputNodes = [];
+  for(let i = 0; i < inputNodeCount; i++) {
+    inputNodes.push(new Constant({id: "i" + i}));
+  }
+
+  // TODO update xor example to use this naming convention
+  let allWeights = [];
+
+  let hiddenOutputs = [];
+  for(let i = 0; i < hiddenNodeCount; i++) {
+    let hiddenInputs = [];
+    for(let j = 0; j < inputNodeCount; j++) {
+      let hiddenWeight = new Variable({id: "i" + j + "->h" + i});
+      allWeights.push(hiddenWeight);
+      hiddenInputs.push(new Multiply([inputNodes[j], hiddenWeight]));
+    }
+    hiddenOutputs.push(new Sigmoid([new Add(hiddenInputs)]));
+  }
+
+  let outputOutputs = [];
+  for(let i = 0; i < outputNodeCount; i++) {
+    let outputInputs = [];
+    for(let j = 0; j < hiddenNodeCount; j++) {
+      let hiddenWeight = new Variable({id: "h" + j + "->o" + i});
+      allWeights.push(hiddenWeight);
+      outputInputs.push(new Multiply([hiddenOutputs[j], hiddenWeight]));
+    }
+    outputOutputs.push(new Sigmoid([new Add(outputInputs)]));
+  }
+
+  let randomInit = () => { return Math.random() - 0.5 };
+
+  let initialValues = {};
+  for(let i = 0; i < allWeights.length; i++) {
+    initialValues[allWeights[i].id] = randomInit();
+  }
+
+  let solver = new Solver(outputOutputs, initialValues);
+
+  let data = [
+    [0, 0, 0],
+    [1, 0, 1],
+    [0, 1, 1],
+    [1, 1, 0],
+  ];
+
+  let learningRate = 0.01;
+  let iterations = 1000 * 1000;
+  for(let i = 0; i < iterations; i++) {
+    // TODO: update language to shuffleIndexes
+    let indexes = randomIndexes(data.length);
+    for(let j = 0; j < data.length; j++) {
+      let randomIndex = indexes[j];
+      solver.solve({"i0": data[randomIndex][0], "i1": data[randomIndex][1]});
+      let target = data[randomIndex][2];
+      let result = solver.idToState[outputOutputs[0].id].value;
+      console.log(data[randomIndex][0] + " ^ " + data[randomIndex][1] + " = " + result);
+      let errors = {};
+      errors[outputOutputs[0].id] = target - result;
+      solver.fit(errors, learningRate);
+    }
+  }
+  console.log(solver.graphToString());
+}
+
+numberExample();
 
 // Add notes about online vs batch. SGD, mini batch, and full batch.
